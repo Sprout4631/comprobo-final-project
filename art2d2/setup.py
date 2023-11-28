@@ -20,6 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'drawing_node = art2d2.drawing_node:main'
+            'localization_node = art2d2.localization_node:main'
         ],
     },
 )
