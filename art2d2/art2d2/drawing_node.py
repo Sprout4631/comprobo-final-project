@@ -2,12 +2,11 @@ import rclpy
 from rclpy.node import Node
 import numpy as np
 
-from geometry_msgs.msg import Pose, Twist
+from geometry_msgs.msg import PoseStamped, Pose, Twist
 from art2d2.helper import euler_from_quaternion
 
 class DrawingNode(Node):
 
-    current_pose: Pose = Pose()
     current_angle = 0.
     target_angle = 0.
     current_point = np.array([0,0])
@@ -18,16 +17,18 @@ class DrawingNode(Node):
     state = "driving"
 
     waypoints = np.array([
-        [0.5, 0.],
-        [0., 0.5],
+        [0.2, 0.],
+        [0., 0.2],
         [0., 0.]
     ])
     
     def __init__(self):
         super().__init__('drawing_node')
 
-        self.pose_subscriber = self.create_subscription(Pose, '/pose', self.pose_callback, 10)
-            # TODO: FIgure out the topic and message type
+        self.pose_subscriber = self.create_subscription(PoseStamped, '/pose_estimate', self.pose_callback, 10)
+        self.current_pose: Pose = Pose()
+
+        # TODO: FIgure out the topic and message type
         timer_period = 0.1
         self.timer = self.create_timer(timer_period, self.move)
 
@@ -43,10 +44,17 @@ class DrawingNode(Node):
             self: node object
             pose_msg: Pose
         """
-        self.current_pose = pose_msg
+        current_pose = pose_msg.pose # takes pose from /pose_estimate
 
-        current_roll, current_pitch, current_yaw = euler_from_quaternion(self.current_pose)
+        current_roll, current_pitch, current_yaw = euler_from_quaternion(
+            current_pose.orientation.x,
+            current_pose.orientation.y,
+            current_pose.orientation.z,
+            current_pose.orientation.w
+        )
         self.current_angle = current_yaw
+        self.current_point = np.array([current_pose.position.x, current_pose.position.y])
+
 
     def rotate_to_angle(self):
         """
@@ -83,8 +91,10 @@ class DrawingNode(Node):
             position_error: difference between desired position and current
                 position
         """
+        print(f"Target point: {self.target_point}")
+        print(f"Current point: {self.current_point}")
         position_error = np.linalg.norm(self.target_point - self.current_point)
-        k_p = 0.5
+        k_p = 0.2
         vel_out = Twist()
         vel_out.linear.x = k_p * position_error
         self.vel_publisher.publish(vel_out)
@@ -95,6 +105,7 @@ class DrawingNode(Node):
         Moves robot to next waypoint by calling rotation and driving functions,
         loops on every timer tick
         """
+        print(self.state)
         if self.state == "turning":
             angle_error = self.rotate_to_angle()
             
@@ -120,8 +131,6 @@ class DrawingNode(Node):
         """
         Increments which waypoint the robot is moving towards.
         """
-        self.current_point = np.array([self.current_pose.position.x, self.current_pose.position.y])
-
         self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
         delta = self.target_point-self.current_point
         self.target_angle = np.arctan2(delta[1], delta[0])
