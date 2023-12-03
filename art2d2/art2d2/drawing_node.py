@@ -5,6 +5,8 @@ import numpy as np
 from geometry_msgs.msg import PoseStamped, Pose, Twist
 from art2d2.helper import euler_from_quaternion
 
+import time
+
 class DrawingNode(Node):
 
     current_angle = 0.
@@ -14,27 +16,34 @@ class DrawingNode(Node):
     waypt_index = 0
     angle_error = 0
 
-    state = "driving"
+    timer_period = 0.1
+    timer = None
+    vel_publisher = None
+
+    state = "turning"
 
     waypoints = np.array([
-        [0.2, 0.],
-        [0., 0.2],
+        [0., -0.2],
+        [-0.2, 0.],
         [0., 0.]
     ])
-    
+
     def __init__(self):
         super().__init__('drawing_node')
 
         self.pose_subscriber = self.create_subscription(PoseStamped, '/pose_estimate', self.pose_callback, 10)
         self.current_pose: Pose = Pose()
-
         # TODO: FIgure out the topic and message type
-        timer_period = 0.1
-        self.timer = self.create_timer(timer_period, self.move)
+        
+        self.timer = self.create_timer(self.timer_period, self.move)
 
         # Publish to cmd_vel topic
         self.vel_publisher = self.create_publisher(Twist, "cmd_vel", 10)
-
+        
+        # Initialize the first waypoint
+        self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
+        delta = self.target_point-self.current_point
+        self.target_angle = np.arctan2(delta[1], delta[0])
 
     def pose_callback(self, pose_msg):
         """
@@ -71,11 +80,15 @@ class DrawingNode(Node):
         # 2. Find how fast we should turn
         # 3. Publish the new velocity command
         # 4. return the angle error
+        print(f"Target angle: {self.target_angle}")
+        print(f"Current angle: {self.current_angle}")
         angle_error = self.target_angle - self.current_angle
-        k_p = 0.1
+        print(f"Angle error: {angle_error}")
+        k_p = 0.2
         vel_out = Twist()
         vel_out.angular.z = k_p * angle_error
         self.vel_publisher.publish(vel_out)
+        print(f"Turining at: {vel_out.angular.z}")
         return angle_error
 
     def drive_to_point(self):
@@ -98,6 +111,8 @@ class DrawingNode(Node):
         vel_out = Twist()
         vel_out.linear.x = k_p * position_error
         self.vel_publisher.publish(vel_out)
+
+        print(f"Driving at :{vel_out.linear.x}")
         return position_error
 
     def move(self):
@@ -109,17 +124,18 @@ class DrawingNode(Node):
         if self.state == "turning":
             angle_error = self.rotate_to_angle()
             
-            if angle_error < 0.1:
-                self.state == "driving"
+            if np.abs(angle_error) < 0.1:
+                print("Switching state to driving")
+                self.state = "driving"
                 
         elif self.state=="driving":
             position_error = self.drive_to_point()
             
-            if position_error < 0.03:
+            if np.abs(position_error) < 0.03:
                 if self.waypt_index < len(self.waypoints):
                     # Get next waypoint and turn
                     self.increment_waypoint()
-                    self.state == "turning"
+                    self.state = "turning"
                 else:
                     # Set velocities to zero
                     # Kill the node
@@ -131,9 +147,14 @@ class DrawingNode(Node):
         """
         Increments which waypoint the robot is moving towards.
         """
+        print("Calculating new waypoint!")
         self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
         delta = self.target_point-self.current_point
         self.target_angle = np.arctan2(delta[1], delta[0])
+
+        print(f"Target point: {self.target_point}")
+        print(f"Delta: {delta}")
+        print(f"Target angle: {self.target_angle}")
 
         self.waypt_index += 1
 

@@ -20,8 +20,8 @@ class LocalizationNode(Node):
 
     def on_timer(self):
 
-        from_frame = "map"
-        to_frame = "base_footprint"
+        to_frame = "map"
+        from_frame = "base_footprint"
 
         try:
             t = self.tf_buffer.lookup_transform(
