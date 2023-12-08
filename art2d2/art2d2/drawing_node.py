@@ -121,6 +121,7 @@ class DrawingNode(Node):
         Moves robot to next waypoint by calling rotation and driving functions,
         loops on every timer tick
         """
+        self.recalculate_targets()
         print(self.state)
         if self.state == "turning":
             angle_error = self.rotate_to_angle()
@@ -135,7 +136,7 @@ class DrawingNode(Node):
             if np.abs(position_error) < 0.06:
                 if self.waypt_index < len(self.waypoints):
                     # Get next waypoint and turn
-                    self.increment_waypoint()
+                    self.waypt_index += 1
                     self.state = "turning"
                 else:
                     # Set velocities to zero
@@ -144,7 +145,7 @@ class DrawingNode(Node):
                     self.vel_publisher.publish(zero_vel)
                     self.destroy_node()
     
-    def increment_waypoint(self):
+    def recalculate_targets(self):
         """
         Increments which waypoint the robot is moving towards.
         """
@@ -157,7 +158,7 @@ class DrawingNode(Node):
         print(f"Delta: {delta}")
         print(f"Target angle: {self.target_angle}")
 
-        self.waypt_index += 1
+        
 
 def main(args=None):
     rclpy.init(args=args)
