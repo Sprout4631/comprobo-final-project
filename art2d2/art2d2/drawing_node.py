@@ -23,8 +23,8 @@ class DrawingNode(Node):
     state = "turning"
 
     waypoints = np.array([
-        [0., -0.2],
-        [-0.2, 0.],
+        [0., 0.3],
+        [0.3, 0.],
         [0., 0.]
     ])
 
@@ -84,7 +84,7 @@ class DrawingNode(Node):
         print(f"Current angle: {self.current_angle}")
         angle_error = self.target_angle - self.current_angle
         print(f"Angle error: {angle_error}")
-        k_p = 0.2
+        k_p = 0.3
         vel_out = Twist()
         vel_out.angular.z = k_p * angle_error
         self.vel_publisher.publish(vel_out)
@@ -113,6 +113,7 @@ class DrawingNode(Node):
         self.vel_publisher.publish(vel_out)
 
         print(f"Driving at :{vel_out.linear.x}")
+        print(f"Position error: {position_error}m")
         return position_error
 
     def move(self):
@@ -124,14 +125,14 @@ class DrawingNode(Node):
         if self.state == "turning":
             angle_error = self.rotate_to_angle()
             
-            if np.abs(angle_error) < 0.1:
+            if np.abs(angle_error) < 0.03:
                 print("Switching state to driving")
                 self.state = "driving"
                 
         elif self.state=="driving":
             position_error = self.drive_to_point()
             
-            if np.abs(position_error) < 0.03:
+            if np.abs(position_error) < 0.06:
                 if self.waypt_index < len(self.waypoints):
                     # Get next waypoint and turn
                     self.increment_waypoint()
