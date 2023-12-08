@@ -2,8 +2,8 @@ import rclpy
 from rclpy.node import Node
 import numpy as np
 
-from geometry_msgs.msg import PoseStamped, Pose, Twist
-from art2d2.helper import euler_from_quaternion
+from geometry_msgs.msg import PoseStamped, Pose, Twist, Quaternion
+from art2d2.helper import euler_from_quaternion, quaternion_from_euler
 
 import time
 
@@ -16,7 +16,7 @@ class DrawingNode(Node):
     waypt_index = 0
     angle_error = 0
 
-    timer_period = 0.1
+    timer_period = 0.05
     timer = None
     vel_publisher = None
 
@@ -39,6 +39,9 @@ class DrawingNode(Node):
 
         # Publish to cmd_vel topic
         self.vel_publisher = self.create_publisher(Twist, "cmd_vel", 10)
+
+        # Pose target publisher
+        self.pose_target_publisher = self.create_publisher(PoseStamped, "/pose_target", 10)
         
         # Initialize the first waypoint
         self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
@@ -85,6 +88,8 @@ class DrawingNode(Node):
         angle_error = self.target_angle - self.current_angle
         print(f"Angle error: {angle_error}")
         k_p = 0.3
+        omega_out = k_p * angle_error
+        omega_out = np.clip(omega_out, -0.4, 0.4)
         vel_out = Twist()
         vel_out.angular.z = k_p * angle_error
         self.vel_publisher.publish(vel_out)
@@ -158,7 +163,17 @@ class DrawingNode(Node):
         print(f"Delta: {delta}")
         print(f"Target angle: {self.target_angle}")
 
-        
+        # make pose target message and publish it to plot in rviz
+        pose_target_msg = PoseStamped() # poseStamped message has a header and a pose
+        pose_target_msg.header.frame_id = "map"
+        pose_target_msg.pose.position.x = self.target_point[0]
+        pose_target_msg.pose.position.y = self.target_point[1]
+        pose_target_msg.pose.position.z = 0.
+        q_target = quaternion_from_euler(0, 0, self.target_angle)
+        pose_target_msg.pose.orientation = Quaternion(
+            x = q_target[0], y = q_target[1], z = q_target[2], w = q_target[3]
+        )
+        self.pose_target_publisher.publish(pose_target_msg)
 
 def main(args=None):
     rclpy.init(args=args)
