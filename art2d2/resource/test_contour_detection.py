@@ -1,7 +1,7 @@
 #!/usr/bin/env Python3
-# import numpy as np
+import numpy as np
 import cv2 as cv
-im = cv.imread('two shapes triangle.jpg')
+im = cv.imread('rectangle.jpg')
 
 assert im is not None, "file could not be read, check with os.path.exists()"
 
