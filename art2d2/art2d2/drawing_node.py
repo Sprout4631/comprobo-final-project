@@ -23,12 +23,89 @@ class DrawingNode(Node):
 
     state = "turning"
 
-    waypoints = np.array([
+    square_waypoints = np.array([
         [0., 0.3],
         [0.3, 0.3],
         [0.3, 0.],
         [0., 0.]
     ])
+
+    star_waypoints = (np.array([
+        [0., 0.6],
+        [1., 0.],
+        [0.55, 1.1],
+        [1.5, 1.85],
+        [0.4, 1.85],
+        [0., 2.96],
+        [-0.4, 1.85],
+        [-1.5, 1.85],
+        [-0.55, 1.1],
+        [-1., 0.]
+    ]) + np.array([1, 0])) / 3
+
+    simple_star_waypoints = (np.array([
+        # [-1., 0.],
+        [1.5, 1.85],
+        [-1.5, 1.85],
+        [1., 0.],
+        [0., 2.96],
+        [-1., 0.]
+    ]) + np.array([1, 0])) / 3
+
+    hexagon_waypoints = np.array([
+        # [0., 0.],
+        [1., 0.],
+        [1.5, 0.866],
+        [1., 1.732],
+        [0., 1.732],
+        [-0.5, 0.866],
+        [0, 0]
+    ]) * 0.5
+
+    cinnamon_roll_waypoints = np.array([
+        # [0., 0.],
+        [1., 0.],
+        [1., -1.],
+        [0., -1.,],
+        [0., 0.],
+        [0.25, -0.2],
+        [0.25, -0.6],
+        [0.5, -0.8],
+        [0.8, -0.5],
+        [0.45, -0.2],
+        [0.45, -0.5]
+    ]) @ np.array([[0, 1], [-1, 0]]) *  0.85
+
+    three_rectangles_waypoints = np.array([
+        [0.07, 0.1],
+        [0.75, 0.1],
+        [0.75, 0.63],
+        [0.07, 0.63],
+        [0.07, 0.1],
+
+        [0.3, 0.3],
+        [0.9, 0.3],
+        [0.9, 1.1,],
+        [0.3, 1.1],
+        [0.3, 0.3],
+
+        [0.5, 0.2],
+        [1.35, 0.2],
+        [1.35, 0.74],
+        [0.5, 0.74],
+        [0.5, 0.2],
+    ]) * 0.85
+
+    waypoints_dict = {
+        "square": square_waypoints,
+        "star": star_waypoints,
+        "simple_star": simple_star_waypoints,
+        "hexagon": hexagon_waypoints,
+        "cinnamon_roll": cinnamon_roll_waypoints,
+        "three_rectangle": three_rectangles_waypoints
+    }
+
+    waypoints = np.array([])
 
     def __init__(self):
         super().__init__('drawing_node')
@@ -44,6 +121,13 @@ class DrawingNode(Node):
 
         # Pose target publisher
         self.pose_target_publisher = self.create_publisher(PoseStamped, "/pose_target", 10)
+
+        # Get the waypoints corresponding to the specified shape
+        self.declare_parameter('shape', 'square')
+        shape = self.get_parameter('shape').get_parameter_value().string_value
+        self.waypoints = self.waypoints_dict[shape]
+        print(f"Setting waypoint to {shape}")
+        print(f"Waypoints: \n{self.waypoints}")
         
         # Initialize the first waypoint
         self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
