@@ -13,6 +13,7 @@ class DrawingNode(Node):
     target_angle = 0.
     current_point = np.array([0,0])
     target_point = np.array([0,0])
+    target_direction = np.array([1, 0])
     waypt_index = 0
     angle_error = 0
 
@@ -24,6 +25,7 @@ class DrawingNode(Node):
 
     waypoints = np.array([
         [0., 0.3],
+        [0.3, 0.3],
         [0.3, 0.],
         [0., 0.]
     ])
@@ -47,6 +49,7 @@ class DrawingNode(Node):
         self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
         delta = self.target_point-self.current_point
         self.target_angle = np.arctan2(delta[1], delta[0])
+        self.target_direction = delta / np.linalg.norm(delta)
 
     def pose_callback(self, pose_msg):
         """
@@ -89,9 +92,10 @@ class DrawingNode(Node):
         print(f"Angle error: {angle_error}")
         k_p = 0.3
         omega_out = k_p * angle_error
-        omega_out = np.clip(omega_out, -0.4, 0.4)
+        max_omega = 0.3
+        omega_out = np.clip(omega_out, -max_omega, max_omega)
         vel_out = Twist()
-        vel_out.angular.z = k_p * angle_error
+        vel_out.angular.z = omega_out
         self.vel_publisher.publish(vel_out)
         print(f"Turining at: {vel_out.angular.z}")
         return angle_error
@@ -111,22 +115,22 @@ class DrawingNode(Node):
         """
         print(f"Target point: {self.target_point}")
         print(f"Current point: {self.current_point}")
-        position_error = np.linalg.norm(self.target_point - self.current_point)
+        position_error = self.target_point - self.current_point
+        projected_position_error = np.dot(position_error, self.target_direction)
         k_p = 0.2
         vel_out = Twist()
-        vel_out.linear.x = k_p * position_error
+        vel_out.linear.x = k_p * projected_position_error
         self.vel_publisher.publish(vel_out)
 
         print(f"Driving at :{vel_out.linear.x}")
-        print(f"Position error: {position_error}m")
-        return position_error
+        print(f"Proj. position error: {projected_position_error}m")
+        return projected_position_error
 
     def move(self):
         """
         Moves robot to next waypoint by calling rotation and driving functions,
         loops on every timer tick
         """
-        self.recalculate_targets()
         print(self.state)
         if self.state == "turning":
             angle_error = self.rotate_to_angle()
@@ -136,12 +140,13 @@ class DrawingNode(Node):
                 self.state = "driving"
                 
         elif self.state=="driving":
-            position_error = self.drive_to_point()
+            projected_position_error = self.drive_to_point()
             
-            if np.abs(position_error) < 0.06:
-                if self.waypt_index < len(self.waypoints):
+            if np.abs(projected_position_error) < 0.03:
+                if self.waypt_index < len(self.waypoints) - 1:
                     # Get next waypoint and turn
                     self.waypt_index += 1
+                    self.recalculate_targets()
                     self.state = "turning"
                 else:
                     # Set velocities to zero
@@ -149,6 +154,7 @@ class DrawingNode(Node):
                     zero_vel = Twist()
                     self.vel_publisher.publish(zero_vel)
                     self.destroy_node()
+                    print("Done!")
     
     def recalculate_targets(self):
         """
@@ -158,10 +164,13 @@ class DrawingNode(Node):
         self.target_point = self.waypoints[self.waypt_index, :] #takes the whole row at this index
         delta = self.target_point-self.current_point
         self.target_angle = np.arctan2(delta[1], delta[0])
+        
+        self.target_direction = delta / np.linalg.norm(delta)
 
         print(f"Target point: {self.target_point}")
         print(f"Delta: {delta}")
         print(f"Target angle: {self.target_angle}")
+        print(f"Target direction: {self.target_direction}")
 
         # make pose target message and publish it to plot in rviz
         pose_target_msg = PoseStamped() # poseStamped message has a header and a pose
