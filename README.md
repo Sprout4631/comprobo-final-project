@@ -1,3 +1,1 @@
----
-layout: home
----
+# Team Art2D2 repo
