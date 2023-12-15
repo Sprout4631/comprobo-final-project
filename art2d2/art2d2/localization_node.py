@@ -19,6 +19,8 @@ class LocalizationNode(Node):
         self.timer = self.create_timer(0.05, self.on_timer)
 
     def on_timer(self):
+        # For every timer tick, poll the tf server for the latest transform from base_footprint to map,
+        # and then publish it to the /pose_estimate topic.
 
         to_frame = "map"
         from_frame = "base_footprint"
@@ -33,8 +35,7 @@ class LocalizationNode(Node):
                 f'Could not transform {to_frame} to {from_frame}: {ex}')
             return
 
-        # print(t)
-
+        # Build the output message and publish it
         translation = t.transform.translation
         rotation = t.transform.rotation
         posn_point = Point(x=translation.x, y=translation.y, z=translation.z)        
