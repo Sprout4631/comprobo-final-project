@@ -5,7 +5,8 @@
 # Defaults settings https://jekyllrb.com/docs/configuration/#default-configuration
 
 title: Art2D2
-description: "documentation for team Art2D2's final comp robo project"
+description: >
+  Utilizing proportional control and robot localization to be as precise as possible, Art2D2 carefully draws images with straight lines.
 
 # url: # (optional) https://example.com, defaults to http://localhost:4000 in development
 
@@ -24,10 +25,10 @@ theme_config:
   appearance: "dark" # can be "light", "dark" or "auto"
   appearance_toggle: true # if appearance can be switched by user
   back_home_text: "home.." # customize text for homepage link in post layout
-  date_format: "%Y-%m-%d" # customize how date is formatted
+  date_format: "%d-%m-%Y" # customize how date is formatted
   show_description: true # show blog description
   show_navbar: true # show horizontal navbar
-  show_footer: true # show footer links in home page,add in _data/home.yml
+  show_footer: false # show footer links in home page,add in _data/home.yml
   show_copyright: true # show copyright notice in footer
   # following keys are using to create home layout
   show_projects: true # show projects as cards, add in _data/home.yml
@@ -35,7 +36,6 @@ theme_config:
   show_old_projects: true # show old projects as cards, add in _data/home.yml
   show_misc_list: false # show generic vertical list for misc details, add _data/home.yml
   show_reading_time: true # show number of words and reading time in the blog posts
-  show_tags: true # show tags in a blog posts
 
 # Files to excludes from your website
 # exclude:  
